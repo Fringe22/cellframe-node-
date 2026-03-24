@@ -1,0 +1,57 @@
+diff --git a/modules/consensus/esbocs/dap_chain_cs_esbocs.c b/modules/consensus/esbocs/dap_chain_cs_esbocs.c
+index 038c57621..1db1aed11 100644
+--- a/modules/consensus/esbocs/dap_chain_cs_esbocs.c
++++ b/modules/consensus/esbocs/dap_chain_cs_esbocs.c
+@@ -623,7 +623,34 @@ static int s_callback_created(dap_chain_t *a_chain, dap_config_t *a_chain_net_cf
+                                                       l_sync_group, ESBOCS_PENALTY_TTL, true,
+                                                       DAP_GDB_MEMBER_ROLE_NOBODY, DAP_CLUSTER_TYPE_AUTONOMIC);
+     dap_link_manager_add_net_associate(l_net->pub.id.uint64, l_session->db_cluster->links_cluster);
+-    dap_global_db_erase_table_sync(l_sync_group);     // Drop table on stratup
++    dap_global_db_cluster_add_notify_callback(l_session->db_cluster, s_db_change_notifier, l_session); // syncfix3-fix7: register DB change notifier
++    // syncfix3-fix7: load penalty records from DB instead of erasing table
++    {
++        size_t l_penalties_count = 0;
++        dap_global_db_obj_t *l_objs = dap_global_db_get_all_sync(l_sync_group, &l_penalties_count);
++        log_it(L_INFO, "Loading %zu penalty records from DB for net %s", l_penalties_count, l_net->pub.name);
++        for (size_t i = 0; i < l_penalties_count; i++) {
++            dap_chain_addr_t *l_validator_addr = dap_chain_addr_from_str(l_objs[i].key);
++            if (!l_validator_addr) {
++                log_it(L_WARNING, "Unreadable address in penalty DB: %s", l_objs[i].key);
++                continue;
++            }
++            dap_chain_esbocs_penalty_item_t *l_item = DAP_NEW_Z(dap_chain_esbocs_penalty_item_t);
++            if (!l_item) {
++                DAP_DELETE(l_validator_addr);
++                continue;
++            }
++            l_item->signing_addr = *l_validator_addr;
++            if (l_objs[i].value_len >= sizeof(uint16_t))
++                l_item->miss_count = *(uint16_t *)l_objs[i].value;
++            else
++                l_item->miss_count = DAP_CHAIN_ESBOCS_PENALTY_KICK;
++            HASH_ADD(hh, l_session->penalty, signing_addr, sizeof(l_item->signing_addr), l_item);
++            DAP_DELETE(l_validator_addr);
++        }
++        log_it(L_INFO, "Loaded %zu penalty items for net %s", l_penalties_count, l_net->pub.name);
++        dap_global_db_objs_delete(l_objs, l_penalties_count);
++    }
+     DAP_DELETE(l_sync_group);
+ 
+ #ifdef DAP_CHAIN_CS_ESBOCS_DIRECTIVE_SUPPORT
+@@ -3471,6 +3498,16 @@ static int s_cli_esbocs(int a_argc, char **a_argv, void **a_str_reply, int a_ver
+     return ret;
+ }
+ 
++// syncfix3-fix7: DB change notifier for penalty group (invalidates cached hash)
++static void s_db_change_notifier(dap_store_obj_t *a_obj, void *a_arg)
++{
++    dap_chain_esbocs_session_t *l_session = (dap_chain_esbocs_session_t *)a_arg;
++    if (l_session) {
++        l_session->is_actual_hash = false;
++        log_it(L_DEBUG, "syncfix7: DB change notifier fired, invalidated hash for session %p", l_session);
++    }
++}
++
+ int dap_chain_esbocs_set_empty_block_every_times(dap_chain_t *a_chain, uint16_t a_blockgen_period)
+ {
+     dap_return_val_if_pass(!a_chain || !DAP_CHAIN_ESBOCS(a_chain), -1);

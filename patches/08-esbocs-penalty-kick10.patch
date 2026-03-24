@@ -1,0 +1,21 @@
+diff --git a/modules/consensus/esbocs/include/dap_chain_cs_esbocs.h b/modules/consensus/esbocs/include/dap_chain_cs_esbocs.h
+index 9937330b3..11376ed74 100644
+--- a/modules/consensus/esbocs/include/dap_chain_cs_esbocs.h
++++ b/modules/consensus/esbocs/include/dap_chain_cs_esbocs.h
+@@ -204,7 +204,7 @@ typedef struct dap_chain_esbocs_penalty_item {
+         UT_hash_handle hh;
+ } dap_chain_esbocs_penalty_item_t;
+ 
+-#define DAP_CHAIN_ESBOCS_PENALTY_KICK   3U      // Number of missed rounds to kick
++#define DAP_CHAIN_ESBOCS_PENALTY_KICK   10U      // syncfix3-fix8: raised from 3 to reduce false kicks
+ 
+ typedef struct dap_chain_esbocs_session {
+     dap_proc_thread_t *proc_thread;
+@@ -220,6 +220,7 @@ typedef struct dap_chain_esbocs_session {
+     unsigned int listen_ensure;
+     dap_chain_node_addr_t my_addr;
+     uint8_t state, old_state;
++    uint16_t db_hash_mismatch_count; // syncfix3-fix8: track consecutive DB hash mismatches
+     bool cs_timer, round_fast_forward, sync_failed, new_round_enqueued, is_actual_hash;
+     dap_global_db_driver_hash_t db_hash;
+     dap_chain_addr_t my_signing_addr;
