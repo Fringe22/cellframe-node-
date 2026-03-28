@@ -1,0 +1,13 @@
+diff --git a/modules/net/dap_chain_net.c b/modules/net/dap_chain_net.c
+index 15b80bd14..f4f352ab3 100644
+--- a/modules/net/dap_chain_net.c
++++ b/modules/net/dap_chain_net.c
+@@ -3311,6 +3311,8 @@ static dap_chain_t *s_switch_sync_chain(dap_chain_net_t *a_net)
+     dap_chain_net_state_t l_prev_state = l_net_pvt->state;
+     l_net_pvt->state = NET_STATE_ONLINE;
+     l_net_pvt->was_online = true;  // Mark that network has reached ONLINE state
++    // syncfix3-fix3: Force immediate sync on ONLINE transition to catch up on missed blocks
++    l_net_pvt->sync_context.stage_last_activity = 0;
+     s_net_states_proc(a_net);
+     if(l_prev_state == NET_STATE_SYNC_CHAINS)
+         dap_ledger_load_end(a_net->pub.ledger);

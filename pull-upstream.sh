@@ -83,12 +83,18 @@ if [ "$PATCH_FAILED" -eq 1 ]; then
     fi
 fi
 
+# 3b. Apply inline patches (fixes that cannot be expressed as git patches)
+echo ""
+echo "[3b/5] Applying inline syncfix patches..."
+python3 /root/cellframe-node/inline-patches.py 2>&1 | while read line; do echo "  $line"; done
+echo ""
+
 # 4. Build
 echo ""
 echo "[4/5] Building with Haswell + LTO (Fix 6)..."
 mkdir -p "$BUILD_DIR"
 cd "$BUILD_DIR"
-cmake -DCMAKE_C_FLAGS="-march=haswell -flto=auto -Wno-error=unused-result" -DCMAKE_BUILD_TYPE=RelWithDebInfo ..
+cmake -DCMAKE_C_FLAGS="-march=haswell -flto=auto -Wno-error=unused-result -Wno-error=address" -DCMAKE_BUILD_TYPE=RelWithDebInfo ..
 make -j$(nproc)
 
 # Strip debug symbols

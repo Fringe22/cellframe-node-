@@ -1,0 +1,11 @@
+--- a/modules/consensus/esbocs/dap_chain_cs_esbocs.c	2026-03-23 01:22:19.477504061 +0100
++++ b/modules/consensus/esbocs/dap_chain_cs_esbocs.c	2026-03-23 01:22:19.481504110 +0100
+@@ -1553,7 +1553,7 @@
+         if (a_session->old_state != DAP_CHAIN_ESBOCS_SESSION_STATE_PREVIOUS)
+             s_session_state_change(a_session, a_session->old_state, a_time);
+         else {
+-            log_it(L_ERROR, "No previous state registered, can't roll back");
++            log_it(L_DEBUG, "No previous state registered, can't roll back");
+             if (!a_session->new_round_enqueued) {
+                 a_session->new_round_enqueued = true;
+                 dap_proc_thread_callback_add(a_session->proc_thread, s_session_round_new, a_session);

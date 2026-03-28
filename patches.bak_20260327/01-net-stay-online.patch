@@ -1,0 +1,15 @@
+diff --git a/modules/net/dap_chain_net.c b/modules/net/dap_chain_net.c
+index 15b80bd14..fb7799c56 100644
+--- a/modules/net/dap_chain_net.c
++++ b/modules/net/dap_chain_net.c
+@@ -3335,8 +3335,8 @@ static void s_sync_timer_callback(void *a_arg)
+         if (l_net_pvt->state == NET_STATE_ONLINE) {
+             if (dap_time_now() - l_net_pvt->sync_context.stage_last_activity <= l_net_pvt->sync_context.sync_idle_time)
+                 return;
+-            l_net_pvt->state = NET_STATE_SYNC_CHAINS;
+-            s_net_states_proc(l_net);
++            // syncfix3-fix1: Stay ONLINE while syncing - do not drop state to SYNC_CHAINS
++            // This allows consensus participation during periodic sync
+         }
+         if (s_restart_sync_chains(l_net)) {
+             log_it(L_WARNING, "Can't start sync chains in net %s, wait next attempt", l_net->pub.name);
