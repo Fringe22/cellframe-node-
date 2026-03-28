@@ -1,0 +1,13 @@
+diff --git a/modules/consensus/esbocs/dap_chain_cs_esbocs.c b/modules/consensus/esbocs/dap_chain_cs_esbocs.c
+index 038c57621..83b363f5e 100644
+--- a/modules/consensus/esbocs/dap_chain_cs_esbocs.c
++++ b/modules/consensus/esbocs/dap_chain_cs_esbocs.c
+@@ -2023,7 +2023,7 @@ void s_session_validator_mark_online(dap_chain_esbocs_session_t *a_session, dap_
+                             l_item->miss_count, l_addr_str, DAP_CHAIN_ESBOCS_PENALTY_KICK);
+         }
+         if (l_item->miss_count)
+-            l_item->miss_count--;
++            l_item->miss_count--;  // syncfix3-fix9: match network decrement-by-1 (Fix 6a reverted)
+         if (!l_inactive && !l_item->miss_count) {
+             HASH_DEL(a_session->penalty, l_item);
+             DAP_DELETE(l_item);

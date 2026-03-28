@@ -1,0 +1,11 @@
+syncfix-fix11: Fix zero timeout on first consensus attempt
+
+listen_ensure was initialized to 0 in s_session_round_new(), causing
+WAIT_PROC timeout = round_attempt_timeout * 0 = 0 seconds on first attempt.
+Node would be selected for a round, sync validators, then immediately
+timeout with "haven't candidate submitted" before it could create a block.
+
+Fix: Initialize listen_ensure = 1 so first attempt gets full timeout.
+
+Applied to:
+- dap_chain_cs_esbocs.c line 1809: a_session->listen_ensure = 1

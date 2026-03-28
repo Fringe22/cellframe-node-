@@ -1,0 +1,8 @@
+syncfix-fix12: Default to LEGACY protocol for unknown peers
+
+s_session_peer_version_resolve returns LEGACY (v8) instead of CURRENT (v9)
+when peer version is unknown. Ensures backward compatibility when sending
+messages to old nodes that may not understand v9 format.
+
+Applied to:
+- dap_chain_cs_esbocs.c: s_session_peer_version_resolve fallback

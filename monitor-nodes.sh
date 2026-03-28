@@ -12,11 +12,11 @@ B_TOTAL=$(echo "$B_CC12 + $B_CC09 + $B_CC08 + $B_CC20 + $B_CC11" | bc)
 RW_CC12=1.383; RW_CC09=1.393; RW_CC08=1.393; RW_CC20=1.434; RW_CC11=1.381
 
 # Get block counts for today
-CC12=$(/opt/cellframe-node/bin/cellframe-node-cli block -net Backbone -chain main list signed -cert backbone.cc12 -from_date ${DATE:2} 2>/dev/null | grep -c "block number")
-CC09=$(ssh root@192.168.2.5 "/opt/cellframe-node/bin/cellframe-node-cli block -net Backbone -chain main list signed -cert backbone.cc09 -from_date ${DATE:2} 2>/dev/null | grep -c \"block number\"" 2>/dev/null)
-CC08=$(ssh root@192.168.2.21 "/opt/cellframe-node/bin/cellframe-node-cli block -net Backbone -chain main list signed -cert backbone.cc08 -from_date ${DATE:2} 2>/dev/null | grep -c \"block number\"" 2>/dev/null)
-CC20=$(ssh -p 37 root@84.86.175.121 "/opt/cellframe-node/bin/cellframe-node-cli block -net Backbone -chain main list signed -cert backbone.cc20 -from_date ${DATE:2} 2>/dev/null | grep -c \"block number\"" 2>/dev/null)
-CC11=$(ssh root@192.168.2.24 "/opt/cellframe-node/bin/cellframe-node-cli block -net Backbone -chain main list signed -cert backbone.cc11 -from_date ${DATE:2} 2>/dev/null | grep -c \"block number\"" 2>/dev/null)
+CC12=$(timeout 120 /opt/cellframe-node/bin/cellframe-node-cli block -net Backbone -chain main list signed -cert backbone.cc12 -from_date ${DATE:2} 2>/dev/null | grep -c "block number")
+CC09=$(ssh root@192.168.2.5 "timeout 120 /opt/cellframe-node/bin/cellframe-node-cli block -net Backbone -chain main list signed -cert backbone.cc09 -from_date ${DATE:2} 2>/dev/null | grep -c \"block number\"" 2>/dev/null)
+CC08=$(ssh root@192.168.2.21 "timeout 120 /opt/cellframe-node/bin/cellframe-node-cli block -net Backbone -chain main list signed -cert backbone.cc08 -from_date ${DATE:2} 2>/dev/null | grep -c \"block number\"" 2>/dev/null)
+CC20=$(ssh -p 37 root@84.86.175.121 "timeout 120 /opt/cellframe-node/bin/cellframe-node-cli block -net Backbone -chain main list signed -cert backbone.cc20 -from_date ${DATE:2} 2>/dev/null | grep -c \"block number\"" 2>/dev/null)
+CC11=$(ssh root@192.168.2.24 "timeout 120 /opt/cellframe-node/bin/cellframe-node-cli block -net Backbone -chain main list signed -cert backbone.cc11 -from_date ${DATE:2} 2>/dev/null | grep -c \"block number\"" 2>/dev/null)
 
 # Hours elapsed today
 HOUR=$(date +%H); MIN=$(date +%M)
@@ -65,17 +65,17 @@ for info in "cc12 local" "cc09 root@192.168.2.5" "cc08 root@192.168.2.21" "cc11 
     name=$(echo "$info" | awk '{print $1}')
     host=$(echo "$info" | awk '{print $2}')
     if [ "$host" = "local" ]; then
-        ST=$(/opt/cellframe-node/bin/cellframe-node-cli net -net Backbone get status 2>/dev/null | grep "NET_STATE" | tail -1 | awk '{print $2}')
+        ST=$(timeout 120 /opt/cellframe-node/bin/cellframe-node-cli net -net Backbone get status 2>/dev/null | grep "NET_STATE" | tail -1 | awk '{print $2}')
         RB=$(tail -500 /opt/cellframe-node/var/log/cellframe-node.log | grep -c "No previous state registered")
     else
-        ST=$(ssh "$host" "/opt/cellframe-node/bin/cellframe-node-cli net -net Backbone get status 2>/dev/null | grep NET_STATE | tail -1 | awk '{print \$2}'" 2>/dev/null)
+        ST=$(ssh "$host" "timeout 120 /opt/cellframe-node/bin/cellframe-node-cli net -net Backbone get status 2>/dev/null | grep NET_STATE | tail -1 | awk '{print \$2}'" 2>/dev/null)
         RB=$(ssh "$host" "tail -500 /opt/cellframe-node/var/log/cellframe-node.log | grep -c 'No previous state registered'" 2>/dev/null)
     fi
     [ -n "$ST" ] && [ "$ST" != "NET_STATE_ONLINE" ] && WARN="${WARN}  WARN: $name status=$ST\n"
     [ "${RB:-0}" -gt 0 ] 2>/dev/null && WARN="${WARN}  WARN: $name ${RB} rollback errors\n"
 done
 # cc20 separately
-ST=$(ssh -p 37 root@84.86.175.121 "/opt/cellframe-node/bin/cellframe-node-cli net -net Backbone get status 2>/dev/null | grep NET_STATE | tail -1 | awk '{print \$2}'" 2>/dev/null)
+ST=$(ssh -p 37 root@84.86.175.121 "timeout 120 /opt/cellframe-node/bin/cellframe-node-cli net -net Backbone get status 2>/dev/null | grep NET_STATE | tail -1 | awk '{print \$2}'" 2>/dev/null)
 RB=$(ssh -p 37 root@84.86.175.121 "tail -500 /opt/cellframe-node/var/log/cellframe-node.log | grep -c 'No previous state registered'" 2>/dev/null)
 [ -n "$ST" ] && [ "$ST" != "NET_STATE_ONLINE" ] && WARN="${WARN}  WARN: cc20 status=$ST\n"
 [ "${RB:-0}" -gt 0 ] 2>/dev/null && WARN="${WARN}  WARN: cc20 ${RB} rollback errors\n"

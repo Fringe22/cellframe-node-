@@ -1,25 +1,11 @@
-diff --git a/modules/net/dap_chain_net.c b/modules/net/dap_chain_net.c
-index 15b80bd14..fff93ab95 100644
---- a/modules/net/dap_chain_net.c
-+++ b/modules/net/dap_chain_net.c
-@@ -3346,9 +3346,17 @@ static void s_sync_timer_callback(void *a_arg)
-     } else {
-         l_state_forming = l_chain->state;
-         if (dap_time_now() - l_net_pvt->sync_context.stage_last_activity > DAP_CHAIN_NET_SYNC_ACTIVITY_TIMEOUT) {
--            // check if need restart sync chains (emergency mode)
--            log_it(L_WARNING, "Chain %s of net %s sync activity timeout", l_chain->name, l_net->pub.name);
--            l_state_forming = CHAIN_SYNC_STATE_ERROR;
-+            // syncfix3-fix2: Check if chain is actually 100% synced before marking ERROR
-+            uint64_t l_local_atoms = l_chain->callback_count_atom(l_chain);
-+            if (l_chain->atom_num_last > 0 && l_local_atoms >= l_chain->atom_num_last) {
-+                log_it(L_INFO, "syncfix3: Chain %s of net %s sync timeout but 100%% synced, marking synced",
-+                               l_chain->name, l_net->pub.name);
-+                l_state_forming = CHAIN_SYNC_STATE_SYNCED;
-+                l_chain->state = CHAIN_SYNC_STATE_SYNCED;
-+            } else {
-+                log_it(L_WARNING, "Chain %s of net %s sync activity timeout", l_chain->name, l_net->pub.name);
-+                l_state_forming = CHAIN_SYNC_STATE_ERROR;
-+            }
-         }
-         // Check if too many MISS packets - need to sync from zero
-         if (l_net_pvt->sync_context.miss_count >= DAP_CHAIN_NET_SYNC_MISS_COUNT_MAX) {
+syncfix3-fix2: Don't mark ERROR on timeout if chain is 100% synced
+
+When sync activity/liveness/progress timeout fires, check if the chain
+is actually fully synced (local atoms >= network atoms) before marking
+CHAIN_SYNC_STATE_ERROR. If synced, mark CHAIN_SYNC_STATE_SYNCED instead.
+Prevents unnecessary SYNC_CHAINS state drops on fully synced nodes.
+
+Applied to 3 timeout paths in dap_chain_net.c s_sync_timer_callback:
+- Legacy single timeout path
+- Split timeout liveness path
+- Split timeout progress path

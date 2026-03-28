@@ -1,0 +1,14 @@
+syncfix-fix13: Accept protocol version 0 from old nodes (ROOT CAUSE FIX)
+
+Old nodes (6f and stock) never set the version field in message headers,
+leaving it at 0 (zero-initialized). The new code only accepted versions
+8 (LEGACY) and 9 (CURRENT), silently dropping ALL messages from old
+validators. This prevented collecting enough signs/precommits to
+complete any block.
+
+Fix: Add version 0 to s_protocol_version_is_supported().
+
+This was Bug #4 - the root cause of 7+ hours of no signing on the new build.
+
+Applied to:
+- dap_chain_cs_esbocs.c: s_protocol_version_is_supported function
