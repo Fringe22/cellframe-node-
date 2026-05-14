@@ -1,4 +1,12 @@
 #!/bin/bash
+#
+# pull-upstream.sh — pull + patch + build cellframe-node into a .deb.
+#
+# .deb archive layout on cc-bb:
+#   /root/cellframe-stock/    — official Demlabs stock .debs (untouched downloads)
+#   /root/cellframe-builds/   — our patched builds (output of this script)
+#   /root/cellframe-node/build/  — transient cmake output dir (wiped each run)
+#
 set -e
 
 PATCHES_DIR="/root/cellframe-node/patches"
