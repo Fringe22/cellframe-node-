@@ -24,6 +24,9 @@ echo "  Timestamp: $TIMESTAMP" >> /root/cellframe-builds/build-history.log
 echo "---" >> /root/cellframe-builds/build-history.log
 
 git fetch origin
+# Also fetch from upstream (github mirror) if remote exists — catches commits that
+# haven't propagated to origin (gitlab.demlabs.net) yet.
+git fetch upstream 2>/dev/null || true
 
 # Stash parent repo untracked files (patch, scripts, etc)
 git stash --include-untracked 2>/dev/null || true
@@ -76,7 +79,9 @@ fi
 echo ""
 echo "[3/5] Applying inline syncfix patches..."
 python3 /root/cellframe-node/inline-patches.py 2>&1 | while read line; do echo "  $line"; done
-PATCH_EXIT=$?
+# PIPESTATUS captures the python3 exit code; $? alone would reflect the while
+# loop's exit (always 0) and silently swallow patch failures.
+PATCH_EXIT=${PIPESTATUS[0]}
 if [ "$PATCH_EXIT" -ne 0 ]; then
     echo "  WARNING: Some inline patches failed! Check output above."
     read -p "  Continue build anyway? [y/N] " -n 1 -r
@@ -107,11 +112,18 @@ BACKUP_DIR="/root/cellframe-node-backup-$(date +%Y%m%d-%H%M%S)"
 echo "  Backing up entire source tree to $BACKUP_DIR"
 cp -a "$REPO" "$BACKUP_DIR"
 echo "  Backup complete ($(du -sh "$BACKUP_DIR" | cut -f1))"
+# Retention: keep the 5 most-recent source backups, prune older ones to stop
+# /root from filling up over many builds (~1-2 GB per backup).
+PRUNE=$(ls -dt /root/cellframe-node-backup-* 2>/dev/null | tail -n +6)
+if [ -n "$PRUNE" ]; then
+    echo "  Pruning old backups:"
+    echo "$PRUNE" | while read -r d; do echo "    rm $d"; rm -rf "$d"; done
+fi
 # Clean old build dir for fresh build
 rm -rf "$BUILD_DIR"
 mkdir -p "$BUILD_DIR"
 cd "$BUILD_DIR"
-cmake -DCMAKE_C_FLAGS="-march=haswell -flto=auto -Wno-error=unused-result -Wno-error=address" -DCMAKE_BUILD_TYPE=Release -DCELLFRAME_NO_OPTIMIZATION=OFF ..
+cmake -DCMAKE_C_FLAGS="-march=haswell -flto=auto -Wno-error=unused-result -Wno-error=address" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCELLFRAME_NO_OPTIMIZATION=OFF ..
 make -j$(nproc)
 
 # Strip debug symbols
@@ -141,12 +153,18 @@ fi
 echo ""
 echo "[6/6] Pre-deploy sync check..."
 CLI=/opt/cellframe-node/bin/cellframe-node-cli
+# Backbone validators only. KV-only nodes (node-5, cc-bb-12 historically KV-only)
+# are not checked here because their Backbone sync state doesn't affect deploy
+# safety on Backbone. cc-bb-12 retained for now since its `net Backbone get status`
+# still returns useful state (running the daemon, not the cert).
 NODES=(
     "cc-bb|LOCAL|0"
     "cc-bb-12|192.168.2.5|22"
     "cc-bb-14|192.168.2.21|22"
     "node-11|192.168.2.24|22"
     "node-9|192.168.2.25|22"
+    "node-6|84.86.175.121|36"
+    "ll-kv|62.171.183.137|22"
 )
 
 sync_ok=true
