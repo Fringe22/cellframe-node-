@@ -18,7 +18,7 @@ echo ""
 
 # 1. Pull latest upstream
 cd "$REPO"
-echo "[1/5] Pulling latest from origin (gitlab.demlabs.net)..."
+echo "[1/5] Pulling latest from upstream (github.com/demlabs-cellframe)..."
 
 # Snapshot current source state before pulling
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
@@ -31,10 +31,11 @@ echo "  Previous state: node=$PREV_NODE sdk=$PREV_SDK" >> /root/cellframe-builds
 echo "  Timestamp: $TIMESTAMP" >> /root/cellframe-builds/build-history.log
 echo "---" >> /root/cellframe-builds/build-history.log
 
-git fetch origin
-# Also fetch from upstream (github mirror) if remote exists — catches commits that
-# haven't propagated to origin (gitlab.demlabs.net) yet.
-git fetch upstream 2>/dev/null || true
+git fetch upstream
+# Also fetch from origin (gitlab.demlabs.net) for completeness, but upstream
+# (github.com mirror) is the canonical source for this script — github tends
+# to be more reachable and the two mirrors stay in sync.
+git fetch origin 2>/dev/null || true
 
 # Stash parent repo untracked files (patch, scripts, etc)
 git stash --include-untracked 2>/dev/null || true
@@ -44,9 +45,9 @@ echo "  Resetting submodules to clean state..."
 git submodule foreach --recursive 'git checkout -- . 2>/dev/null; git clean -fd 2>/dev/null' || true
 
 git checkout master 2>/dev/null || git checkout $(git rev-parse --abbrev-ref HEAD)
-git pull origin master --recurse-submodules || {
+git pull upstream master --recurse-submodules || {
     echo "  Pull with submodules had errors, trying without..."
-    git pull origin master
+    git pull upstream master
 }
 git submodule update --init --recursive --force || {
     echo "  Warning: some submodules failed to update, continuing..."
@@ -54,10 +55,10 @@ git submodule update --init --recursive --force || {
 echo "  Upstream at: $(git log --oneline -1)"
 
 # Pull latest cellframe-sdk master (may be ahead of parent repo's submodule pointer)
-echo "  Pulling latest cellframe-sdk..."
+echo "  Pulling latest cellframe-sdk from upstream..."
 cd "$REPO/cellframe-sdk"
-git fetch origin
-git merge origin/master --no-edit 2>/dev/null && \
+git fetch upstream
+git merge upstream/master --no-edit 2>/dev/null && \
     echo "  cellframe-sdk at: $(git log --oneline -1)" || \
     echo "  cellframe-sdk already up to date"
 cd "$REPO"
